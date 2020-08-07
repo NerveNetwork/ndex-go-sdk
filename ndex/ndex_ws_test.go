@@ -60,7 +60,7 @@ func TestNdexWs_Ping(t *testing.T) {
 }
 
 func TestNdexWs_SubscribeOrderBook(t *testing.T) {
-	orderBookEvent, err := ndexWs.SubscribeOrderBook("BTCUSDT", 10)
+	orderBookEvent, err := ndexWs.SubscribeOrderBook("NVTNULS", 10)
 	if err == nil {
 		t.Log("subscribe success")
 	}

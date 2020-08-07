@@ -57,10 +57,10 @@ type Market struct {
  */
 func (market *Market) Initialize() {
 	if market.Host == "" {
-		market.Host = "http://beta.nervedex.com"
+		market.Host = "https://api.nervedex.com"
 	}
 	if market.WsHost == "" {
-		market.WsHost = "ws://beta.nervedex.com"
+		market.WsHost = "wss://api.nervedex.com"
 	}
 }
 
@@ -99,6 +99,7 @@ func (market *Market) GetSymbols() ([]*Symbol, error) {
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Println(string(responseBytes))
 	// Parsing the return value 解析返回值
 	getSymbols := &GetSymbols{}
 	err = json.Unmarshal(responseBytes, getSymbols)
@@ -109,6 +110,63 @@ func (market *Market) GetSymbols() ([]*Symbol, error) {
 		return nil, errors.New(fmt.Sprintf("the server return false, code=%d , msg=%s", getSymbols.Code, getSymbols.Msg))
 	}
 	return getSymbols.Data, nil
+}
+
+/**
+ * Get ticker information of trading pairs
+ * 获取交易对的ticker信息
+ */
+func (market *Market) GetTicker(symbol string) (*Ticker, error) {
+	if symbol == "" {
+		return nil, errors.New("symbol can not empty")
+	}
+	uri := fmt.Sprintf("/api/ticker/%s", symbol)
+	url := market.Host + uri
+	responseBytes, err := utils.RequestGet(url)
+	if err != nil {
+		return nil, err
+	}
+	//fmt.Println(string(responseBytes))
+	// Parsing the return value 解析返回值
+	getTicker := &GetTicker{}
+	err = json.Unmarshal(responseBytes, getTicker)
+	if err != nil {
+		return nil, err
+	}
+	if !getTicker.Success {
+		return nil, errors.New(fmt.Sprintf("the server return false, code=%d , msg=%s", getTicker.Code, getTicker.Msg))
+	}
+	return getTicker.Data, nil
+}
+
+/**
+ * Get information about all trading pairs in the trading market
+ * 获取交易市场的所有交易对信息
+ */
+func (market *Market) Kline(symbol string, inv, size int) ([]*Kline, error) {
+	uri := "/api/kline"
+	url := market.Host + uri
+
+	params := map[string]interface{} {
+		"symbol":symbol,
+		"type":inv,
+		"limit":size,
+	}
+	responseBytes, err := utils.RequestHttpGet(url, params)
+	if err != nil {
+		return nil, err
+	}
+	//fmt.Println(string(responseBytes))
+	// Parsing the return value 解析返回值
+	getKline := &GetKline{}
+	err = json.Unmarshal(responseBytes, getKline)
+	if err != nil {
+		return nil, err
+	}
+	if !getKline.Success {
+		return nil, errors.New(fmt.Sprintf("the server return false, code=%d , msg=%s", getKline.Code, getKline.Msg))
+	}
+	return getKline.Data, nil
 }
 
 /**
@@ -260,6 +318,7 @@ func (market *Market) GetOrderListByAddress(address, symbol string, pageNumber, 
 	if !getOrderList.Success {
 		return nil, errors.New(fmt.Sprintf("the server return false, code=%d , msg=%s", getOrderList.Code, getOrderList.Msg))
 	}
+	//fmt.Println(getOrderList.Data)
 	return getOrderList.Data, nil
 }
 
@@ -277,6 +336,7 @@ func (market *Market) GetOrder(id string) (*Order, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(responseBytes))
 	// Parsing the return value 解析返回值
 	getOrder := &GetOrder{}
 	err = json.Unmarshal(responseBytes, getOrder)
@@ -537,4 +597,63 @@ func (market *Market) SubscribeOrderBook(symbol string, top int) (chan *OrderBoo
 		return nil, err
 	}
 	return ndexWs.SubscribeOrderBook(symbol, top)
+}
+
+/**
+ * UnSubscription transaction changes to order book
+ * 取消订阅交易对盘口及变化
+ */
+func (market *Market) UnSubscribeOrderBook(symbol string) (error) {
+	ndexWs, err := market.getWebsocket()
+	if err != nil {
+		return err
+	}
+	return ndexWs.UnSubscribeOrderBook(symbol)
+}
+
+/**
+ * UnSubscription Pending orders and changes to the configuration address
+ * 取消订阅配置地址的挂单及变化
+ */
+func (market *Market) UnSubscribeOrderChange() (error) {
+	if market.Address == "" {
+		return errors.New("No address is configured")
+	}
+	return market.UnSubscribeOrderChangeByAddress(market.Address)
+}
+
+/**
+ * UnSubscription to pending orders and changes at specified addresses
+ * 取消订阅指定地址的挂单及变化
+ */
+func (market *Market) UnSubscribeOrderChangeByAddress(address string) (error) {
+	ndexWs, err := market.getWebsocket()
+	if err != nil {
+		return err
+	}
+	return ndexWs.UnSubscribeOrderChange(address)
+}
+
+
+/**
+ * Subscription configuration address balance changes
+ * 订阅配置地址的余额变化
+ */
+func (market *Market) SubscribeBalanceChange() (chan *WsBalanceChange, error) {
+	if market.Address == "" {
+		return nil, errors.New("No address is configured")
+	}
+	return market.SubscribeBalanceChangeByAddress(market.Address)
+}
+
+/**
+ * Subscribe to the balance change of the specified address
+ * 订阅指定地址的余额变化
+ */
+func (market *Market) SubscribeBalanceChangeByAddress(address string) (chan *WsBalanceChange, error) {
+	ndexWs, err := market.getWebsocket()
+	if err != nil {
+		return nil, err
+	}
+	return ndexWs.SubscribeBalanceChange(address)
 }

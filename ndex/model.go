@@ -45,12 +45,43 @@ type GetSymbols struct {
 }
 
 type Symbol struct {
-	Symbol 				string		`"json:symbol"`		//交易对名称
-	BaseAssetName 		string		`"json:baseAssetName"`		//交易资产名称
-	BaseDecimal			int			`"json:baseDecimal"`		//交易资产小数位数
-	QuoteAssetName 		string		`"json:quoteAssetName"`		//货币资产名称
-	QuoteDecimal		int			`"json:quoteDecimal"`		//货币资产小数位数
+	Symbol 				string		`"json:symbol"`					//交易对名称
+	BaseAssetName 		string		`"json:baseAssetName"`			//交易资产名称
+	BaseDecimal			int			`"json:baseDecimal"`			//交易资产小数位数
+	QuoteAssetName 		string		`"json:quoteAssetName"`			//货币资产名称
+	QuoteDecimal		int			`"json:quoteDecimal"`			//货币资产小数位数
 	BaseMinTradingAmount	float64	`"json:baseMinTradingAmount"`	//最小委托的数量（交易资产）
+}
+
+type GetTicker struct {
+	BaseResponse
+	Data	*Ticker	`"json:data"`
+}
+
+type Ticker struct {
+	Symbol 		string		`"json:symbol"`		//交易对名称
+	Volume		float64		`"json:volume"`		//24小时成交量
+	Open		float64		`"json:open"`		//24小时开盘价
+	High		float64		`"json:high"`		//24小时最高价格
+	Last		float64		`"json:last"`		//最新成交价
+	Low			float64		`"json:low"`		//24小时最低价格
+	Ask			float64		`"json:ask"`		//盘口最高卖单价
+	Bid			float64		`"json:bid"`		//盘口最高买单价
+	Time		int64		`"json:time"`		//最新成交时间
+}
+
+type GetKline struct {
+	BaseResponse
+	Data	[]*Kline	`"json:data"`
+}
+
+type Kline struct {
+	Time		int64		`"json:time"`		//时间
+	Volume		float64		`"json:volume"`		//成交量
+	Open		float64		`"json:open"`		//开盘价
+	Close		float64		`"json:close"`		//收盘价
+	High		float64		`"json:high"`		//最高价
+	Low			float64		`"json:low"`		//最低价
 }
 
 type GetBalance struct {
@@ -155,4 +186,17 @@ type NewOrderResponse struct {
 type BroadcastResponse struct {
 	BaseResponse
 	Data	string	`"json:data"`
+}
+
+type WsBalanceChangeResponse struct {
+	Channel 				string		`"json:channel"`
+	Action 					string		`"json:action"`
+	Status					int			`"json:status"`
+	Data 					*WsBalanceChange	`"json:data"`
+}
+
+type WsBalanceChange struct {
+	T			string		`"json:t"`
+	A			string		`"json:a"`
+	D			[]*Balance	`"json:d"`
 }

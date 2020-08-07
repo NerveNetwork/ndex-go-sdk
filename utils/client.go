@@ -30,6 +30,7 @@ package utils
 
 import (
 	json2 "encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -39,6 +40,33 @@ func RequestGet(url string) ([]byte, error) {
 	h := NewHttpSend(url)
 	content, err := h.Get()
 	return content, err
+}
+
+func RequestHttpGet(url string, params map[string]interface{}) ([]byte, error) {
+	client := http.Client{}
+	json,error := json2.Marshal(params)
+	if error != nil {
+		return nil, error
+	}
+	request, err := http.NewRequest("GET", url, strings.NewReader(string(json))) //请求
+	if err != nil {
+		return nil, err // handle error
+	}
+	request.Header.Set("Content-Type", "application/json; charset=UTF-8") //设置Content-Type
+	request.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36") //设置User-Agent
+	response, err := client.Do(request)                //返回
+	if err != nil {
+		return nil, err
+	}
+	if response == nil || response.Body == nil {
+		return nil, errors.New("response is nil")
+	}
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func RequestPost(url string, params map[string]interface{}) ([]byte, error) {
@@ -56,6 +84,9 @@ func RequestPost(url string, params map[string]interface{}) ([]byte, error) {
 	response, err := client.Do(request)                //返回
 	if err != nil {
 		return nil, err
+	}
+	if response == nil || response.Body == nil {
+		return nil, errors.New("response is nil")
 	}
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)

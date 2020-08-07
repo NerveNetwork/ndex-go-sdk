@@ -88,10 +88,30 @@ func (ws *NdexWs) SubscribeOrderChange(address string) (chan *WsOrderChange, err
 	return subInfo.Event.(chan *WsOrderChange), nil
 }
 
+func (ws *NdexWs) SubscribeBalanceChange(address string) (chan *WsBalanceChange, error) {
+	channel := fmt.Sprintf("account:%s", address)
+	msg := fmt.Sprintf("{\"action\":\"Subscribe\",\"channel\":\"%s\"}", channel)
+	ws.writeChannel <- msg
+
+	subInfo := ws.subscribeMap[channel]
+	if subInfo == nil {
+		balanceChangeEvent := make(chan *WsBalanceChange, 10)
+		subInfo = &WsSubInfo{
+			Channel: 	channel,
+			SubMessage: msg,
+			Event: 		balanceChangeEvent,
+		}
+		ws.subscribeMap[channel] = subInfo
+	}
+	return subInfo.Event.(chan *WsBalanceChange), nil
+}
+
 func (ws *NdexWs) UnSubscribeOrderBook(symbol string) error {
 	msg := fmt.Sprintf("{\"action\":\"Unsubscribe\",\"channel\":\"apiOrderBook:{\\\"symbol\\\":\\\"%s\\\"}\"}", symbol)
 	ws.writeChannel <- msg
 	channel := fmt.Sprintf("apiOrderBook:%s", symbol)
+	wsSubInfo := ws.subscribeMap[channel]
+	close(wsSubInfo.Event.(chan *OrderBook))
 	delete(ws.subscribeMap, channel)
 	return nil
 }
@@ -100,6 +120,18 @@ func (ws *NdexWs) UnSubscribeOrderChange(address string) error {
 	msg := fmt.Sprintf("{\"action\":\"Unsubscribe\",\"channel\":\"order:%s\"}", address)
 	ws.writeChannel <- msg
 	channel := fmt.Sprintf("order:%s", address)
+	wsSubInfo := ws.subscribeMap[channel]
+	close(wsSubInfo.Event.(chan *WsOrderChange))
+	delete(ws.subscribeMap, channel)
+	return nil
+}
+
+func (ws *NdexWs) UnSubscribeBalanceChange(address string) error {
+	msg := fmt.Sprintf("{\"action\":\"Unsubscribe\",\"channel\":\"account:%s\"}", address)
+	ws.writeChannel <- msg
+	channel := fmt.Sprintf("account:%s", address)
+	wsSubInfo := ws.subscribeMap[channel]
+	close(wsSubInfo.Event.(chan *WsBalanceChange))
 	delete(ws.subscribeMap, channel)
 	return nil
 }
@@ -112,16 +144,16 @@ func (ws *NdexWs) reSubscribe() error {
 }
 
 func (ws *NdexWs) ReConn() error {
-	log.Println("reConning...")
+	log.Println("ndex reConning...")
 	err := ws.Conn()
 	if err != nil {
 		return err
 	}
 	err = ws.reSubscribe()
 	if err == nil {
-		log.Println("reConn success.")
+		log.Println("ndex reConn success.")
 	} else {
-		log.Println("reConn error : ", err)
+		log.Println("ndex reConn error : ", err)
 	}
 	return err
 }
@@ -156,7 +188,7 @@ func (ws *NdexWs) messageHandler() {
 		case <- ws.done:
 			return
 		case message := <- ws.readChannel:
-			log.Println("received message :  " + message)
+			//log.Println("received message :  " + message)
 			wsResponse := &WsResponse{}
 			messageBytes := []byte(message)
 			err := json.Unmarshal(messageBytes, wsResponse)
@@ -219,6 +251,19 @@ func (ws *NdexWs) messageHandler() {
 						}
 						wsSubInfo.Event.(chan *WsOrderChange) <- orderChangeResponse.Data
 					}
+				case "account":
+					balanceChangeResponse := &WsBalanceChangeResponse{}
+					err = json.Unmarshal(messageBytes, balanceChangeResponse)
+					if err != nil {
+						log.Println(err, ", [balance] message : ", message)
+						break
+					}
+					channel := fmt.Sprintf("account:%s", balanceChangeResponse.Data.A)
+					wsSubInfo := ws.subscribeMap[channel]
+					if wsSubInfo == nil {
+						continue
+					}
+					wsSubInfo.Event.(chan *WsBalanceChange) <- balanceChangeResponse.Data
 				default:
 					log.Println("[NOTICE] Not yet parsed message : ", message)
 				}

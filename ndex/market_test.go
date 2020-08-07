@@ -39,8 +39,14 @@ var (
 )
 
 func init() {
-	host := ""
-	market = &Market{Host: host}
+	host := "http://beta.nervedex.com"
+	wsHost := "ws://beta.nervedex.com"
+	market = &Market{
+		Host: host,
+		WsHost: wsHost,
+		Address: "",
+		PrivateKey: "",
+	}
 	market.Initialize()
 }
 
@@ -72,8 +78,40 @@ func TestMarket_GetSymbols(t *testing.T) {
 	}
 }
 
+
+func TestMarket_GetTicker(t *testing.T) {
+	symbol := "NVTNULS"
+	ticker, err := market.GetTicker(symbol)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if ticker == nil {
+		t.Fail()
+		return
+	}
+	fmt.Printf("%#v\n", ticker)
+}
+
+func TestMarket_Kline(t *testing.T) {
+	symbol := "NVTNULS"
+	klines, err := market.Kline(symbol, 1, 10)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if klines == nil {
+		t.Fail()
+		return
+	}
+	fmt.Println("response length is : ", len(klines))
+	for _, kline := range klines {
+		fmt.Printf("%#v\n", kline)
+	}
+}
+
 func TestMarket_GetBalance(t *testing.T) {
-	address := "TNVTdN9iCdXS46SuN8UPd2kkdXmGNYgMMxuSJ"
+	address := "TNVTdTSPPkqrEL9RuiiTUk4ivn6hfRiNt9giD"
 	balances, err := market.GetBalanceByAddress(address)
 	if err != nil {
 		t.Error(err)
@@ -89,7 +127,7 @@ func TestMarket_GetBalance(t *testing.T) {
 }
 
 func TestMarket_GetOrderBook(t *testing.T) {
-	symbol := "BTCUSDT"
+	symbol := "NVTNULS"
 	size := 10
 	orderBook, err := market.GetOrderBook(symbol, size)
 	if err != nil {
@@ -104,8 +142,8 @@ func TestMarket_GetOrderBook(t *testing.T) {
 }
 
 func TestMarket_GetOpenOrder(t *testing.T) {
-	address := "TNVTdN9iCdXS46SuN8UPd2kkdXmGNYgMMxuSJ"
-	symbol := "BTCUSDT"
+	address := "TNVTdTSPPkqrEL9RuiiTUk4ivn6hfRiNt9giD"
+	symbol := "NVTNULS"
 	openOrders, err := market.GetOpenOrderByAddress(address, symbol)
 	if err != nil {
 		t.Error(err)
@@ -123,8 +161,8 @@ func TestMarket_GetOpenOrder(t *testing.T) {
 }
 
 func TestMarket_GetOrderList(t *testing.T) {
-	address := "TNVTdN9iCdXS46SuN8UPd2kkdXmGNYgMMxuSJ"
-	symbol := "BTCUSDT"
+	address := "TNVTdTSPPkqrEL9RuiiTUk4ivn6hfRiNt9giD"
+	symbol := "NVTNULS"
 	orderList, err := market.GetOrderListByAddress(address, symbol, 5000700, 10)
 	if err != nil {
 		t.Error(err)
@@ -156,7 +194,7 @@ func TestMarket_GetOrder(t *testing.T) {
 }
 
 func TestMarket_NewOrder(t *testing.T) {
-	order, err := market.NewOrderByAddress("TNVTdN9iCdXS46SuN8UPd2kkdXmGNYgMMxuSJ", "1b0470a2a8c8a02c5dee364fd6d0f56dc7e30a4a817c18b4b00c419c349dc7df", "BTCUSDT", 1, 8000, 1)
+	order, err := market.NewOrderByAddress("TNVTdTSPPkqrEL9RuiiTUk4ivn6hfRiNt9giD", "1b0470a2a8c8a02c5dee364fd6d0f56dc7e30a4a817c18b4b00c419c349dc7df", "NVTNULS", 1, 8000, 1)
 	if err != nil {
 		t.Error(err)
 		return
@@ -180,7 +218,7 @@ func TestMarket_CancelOrder(t *testing.T) {
 }
 
 func TestMarket_SubscribeOrderBook(t *testing.T) {
-	orderBookEvent, err := market.SubscribeOrderBook("BTCUSDT", 10)
+	orderBookEvent, err := market.SubscribeOrderBook("NVTNULS", 10)
 	if err == nil {
 		t.Log("subscribe success")
 	}
@@ -193,7 +231,7 @@ func TestMarket_SubscribeOrderBook(t *testing.T) {
 }
 
 func TestMarket_SubscribeOrderChange(t *testing.T) {
-	orderChangeEvent, err :=  market.SubscribeOrderChangeByAddress("TNVTdN9iCdXS46SuN8UPd2kkdXmGNYgMMxuSJ")
+	orderChangeEvent, err :=  market.SubscribeOrderChangeByAddress("TNVTdTSPPkqrEL9RuiiTUk4ivn6hfRiNt9giD")
 	if err == nil {
 		t.Log("subscribe success")
 	}
